@@ -17,7 +17,7 @@ def read(conn, mask):
         args = resp_decoder(data)
         command = args[0].upper()  # command
         if command == b"PING":
-            conn.send(resp_encoder(b"PONG"))
+            conn.send(b"+PONG\r\n")
         if command == b"ECHO":
             conn.send(resp_encoder(args[1]))
     else:
