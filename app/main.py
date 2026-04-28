@@ -14,12 +14,36 @@ def accept(sock, mask):
 def read(conn, mask):
     data = conn.recv(1024)
     if data:
-        if b"*1\r\n$4\r\nPING\r\n" in data:
-            conn.send(b"+PONG\r\n")
+        args = resp_decoder(data)
+        command = args[0].upper()  # command
+        if command == b"PING":
+            conn.send(resp_encoder(b"PONG"))
+        if command == b"ECHO":
+            conn.send(resp_encoder(args[1]))
     else:
         print("closing", conn)
         sel.unregister(conn)
         conn.close()
+
+
+def resp_decoder(data):
+    input = data.split(b"\r\n")
+    it = iter(input)
+    length = int(next(it)[1:])  # *N
+    return [next(it) for _ in (next(it) for _ in range(length))]  # skip $N, yield value
+
+
+def resp_encoder(value):
+    match value:
+        case int():
+            return b":" + str(value).encode() + b"\r\n"
+        case None:
+            return b"$-1\r\n"
+        case str():
+            value = value.encode()
+        case bytes():
+            pass
+    return b"$" + str(len(value)).encode() + b"\r\n" + value + b"\r\n"
 
 
 def main():
