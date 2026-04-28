@@ -22,7 +22,13 @@ def read(conn, mask):
 
         handler = COMMANDS.get(command)
         if handler:
-            conn.send(handler(args))
+            if command == b"BLPOP":
+                response = handler(args, conn)  # pass conn
+            else:
+                response = handler(args)
+
+            if response:
+                conn.send(response)
     else:
         print("closing", conn)
         sel.unregister(conn)
