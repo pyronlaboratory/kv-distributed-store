@@ -1,0 +1,1 @@
+store = {}  # in-memory store

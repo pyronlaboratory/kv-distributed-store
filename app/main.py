@@ -1,10 +1,15 @@
-import time
 import socket  # noqa: F401
 import selectors
 
-MULTIPLIER = {b"PX": 1, b"EX": 1000}
+from app.protocols.decoder import resp_decoder
+from app.commands import echo, ping, get, set
 
-store = {}  # in-memory store
+COMMANDS = {
+    b"PING": ping.execute,
+    b"ECHO": echo.execute,
+    b"SET": set.execute,
+    b"GET": get.execute,
+}
 
 sel = selectors.DefaultSelector()
 
@@ -21,50 +26,14 @@ def read(conn, mask):
     if data:
         args = resp_decoder(data)
         command = args[0].upper()  # command
-        if command == b"PING":
-            conn.send(b"+PONG\r\n")
-        if command == b"ECHO":
-            conn.send(resp_encoder(args[1]))
-        if command == b"SET":
-            key, value = args[1], args[2]
-            option = args[3].upper() if len(args) > 3 else None
-            expires_at = (
-                time.time() * 1000 + int(args[4]) * MULTIPLIER[option]
-                if option in MULTIPLIER
-                else None
-            )
-            store[key] = (value, expires_at)
-            conn.send(b"+OK\r\n")
-        if command == b"GET":
-            value, expires_at = store.get(args[1], (None, None))
-            if expires_at and expires_at < time.time() * 1000:  # expired
-                # del store[args[1]]
-                value = None
-            conn.send(resp_encoder(value))
+
+        handler = COMMANDS.get(command)
+        if handler:
+            conn.send(handler(args))
     else:
         print("closing", conn)
         sel.unregister(conn)
         conn.close()
-
-
-def resp_decoder(data):
-    input = data.split(b"\r\n")
-    it = iter(input)
-    length = int(next(it)[1:])  # *N
-    return [next(it) for _ in (next(it) for _ in range(length))]  # skip $N, yield value
-
-
-def resp_encoder(value):
-    match value:
-        case int():
-            return b":" + str(value).encode() + b"\r\n"
-        case None:
-            return b"$-1\r\n"
-        case str():
-            value = value.encode()
-        case bytes():
-            pass
-    return b"$" + str(len(value)).encode() + b"\r\n" + value + b"\r\n"
 
 
 def main():
