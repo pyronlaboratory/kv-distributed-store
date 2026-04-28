@@ -1,8 +1,10 @@
+import time
 import socket  # noqa: F401
 import selectors
 
 from app.protocols.decoder import resp_decoder
 from app.commands import COMMANDS
+from app.store import waiting
 
 sel = selectors.DefaultSelector()
 
@@ -35,13 +37,30 @@ def read(conn, mask):
         conn.close()
 
 
+def check_expired_waiters():
+    now = time.time()
+    for key, waiters in list(waiting.items()):
+        expired = [(c, d) for c, d in waiters if d and now >= d]
+        for conn, deadline in expired:
+            waiters.remove((conn, deadline))
+            conn.send(b"*-1\r\n")
+
+
+def get_next_timeout():
+    deadlines = [d for waiters in waiting.values() for _, d in waiters if d]
+    if not deadlines:
+        return None
+    return max(0, min(deadlines) - time.time())
+
+
 def main():
     server_socket = socket.create_server(("localhost", 6379), reuse_port=True)
     server_socket.setblocking(False)
     sel.register(server_socket, selectors.EVENT_READ, accept)
 
     while True:
-        events = sel.select()
+        events = sel.select(timeout=get_next_timeout())
+        check_expired_waiters()
         for key, mask in events:
             callback = key.data
             callback(key.fileobj, mask)
