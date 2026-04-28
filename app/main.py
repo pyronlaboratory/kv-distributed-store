@@ -1,5 +1,8 @@
+import time
 import socket  # noqa: F401
 import selectors
+
+MULTIPLIER = {b"PX": 1, b"EX": 1000}
 
 store = {}  # in-memory store
 
@@ -23,10 +26,20 @@ def read(conn, mask):
         if command == b"ECHO":
             conn.send(resp_encoder(args[1]))
         if command == b"SET":
-            store[args[1]] = args[2]
+            key, value = args[1], args[2]
+            option = args[3].upper() if len(args) > 3 else None
+            expires_at = (
+                time.time() * 1000 + int(args[4]) * MULTIPLIER[option]
+                if option in MULTIPLIER
+                else None
+            )
+            store[key] = (value, expires_at)
             conn.send(b"+OK\r\n")
         if command == b"GET":
-            value = store.get(args[1])
+            value, expires_at = store.get(args[1], (None, None))
+            if expires_at and expires_at < time.time() * 1000:  # expired
+                # del store[args[1]]
+                value = None
             conn.send(resp_encoder(value))
     else:
         print("closing", conn)
