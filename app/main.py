@@ -5,12 +5,18 @@ def main():
     # print("Logs from your program will appear here!")
 
     server_socket = socket.create_server(("localhost", 6379), reuse_port=True)
+
     while True:
         sock, _ = server_socket.accept()
-        data = sock.recv(1024).strip()
-        if data == "*1\r\n$4\r\nPING\r\n":
-            response = b"+PONG\r\n"
-            sock.sendall(response)
+        while True:
+            data = sock.recv(1024)
+            if not data:
+                break
+
+            if b"*1\r\n$4\r\nPING\r\n" in data:
+                response = b"+PONG\r\n"
+                sock.sendall(response)
+
         sock.close()
 
 
