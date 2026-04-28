@@ -8,11 +8,11 @@ def execute(args):
     if key not in store:
         store[key] = ([], None)
     store[key][0].extend(elements)
+    count = len(store[key][0])  # count BEFORE popping for waiter
 
-    # notify first waiter if any
     if key in waiting and waiting[key]:
         conn = waiting[key].popleft()
         element = store[key][0].pop(0)
         conn.send(resp_array_encoder([key, element]))
 
-    return resp_encoder(len(store[key][0]))
+    return resp_encoder(count)  # return original count
