@@ -1,6 +1,8 @@
 import socket  # noqa: F401
 import selectors
 
+store = {}  # in-memory store
+
 sel = selectors.DefaultSelector()
 
 
@@ -20,6 +22,12 @@ def read(conn, mask):
             conn.send(b"+PONG\r\n")
         if command == b"ECHO":
             conn.send(resp_encoder(args[1]))
+        if command == b"SET":
+            store[args[1]] = args[2]
+            conn.send(b"+OK\r\n")
+        if command == b"GET":
+            value = store.get(args[1])
+            conn.send(resp_encoder(value))
     else:
         print("closing", conn)
         sel.unregister(conn)
