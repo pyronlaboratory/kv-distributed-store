@@ -2,14 +2,7 @@ import socket  # noqa: F401
 import selectors
 
 from app.protocols.decoder import resp_decoder
-from app.commands import echo, ping, get, set
-
-COMMANDS = {
-    b"PING": ping.execute,
-    b"ECHO": echo.execute,
-    b"SET": set.execute,
-    b"GET": get.execute,
-}
+from app.commands import COMMANDS
 
 sel = selectors.DefaultSelector()
 
