@@ -11,7 +11,7 @@ def execute(args):
     count = len(store[key][0])  # count BEFORE popping for waiter
 
     if key in waiting and waiting[key]:
-        conn = waiting[key].popleft()
+        conn, _ = waiting[key].popleft()
         element = store[key][0].pop(0)
         conn.send(resp_array_encoder([key, element]))
 
