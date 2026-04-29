@@ -5,6 +5,8 @@ from app.protocols.encoder import resp_entry_encoder
 def parse_bound(bound, default_seq):
     if bound == b"-":
         return (0, 0)
+    if bound == b"+":
+        return (float("inf"), float("inf"))
     if b"-" in bound:
         ms, seq = bound.split(b"-")
         return int(ms), int(seq)
