@@ -2,9 +2,9 @@ import time
 import socket  # noqa: F401
 import selectors
 
+from app.store import waiting, xread_waiting
 from app.protocols.decoder import resp_decoder
 from app.commands import COMMANDS
-from app.store import waiting
 
 sel = selectors.DefaultSelector()
 
@@ -24,8 +24,8 @@ def read(conn, mask):
 
         handler = COMMANDS.get(command)
         if handler:
-            if command == b"BLPOP":
-                response = handler(args, conn)  # pass conn
+            if command in (b"BLPOP", b"XREAD"):
+                response = handler(args, conn)
             else:
                 response = handler(args)
 
@@ -39,15 +39,21 @@ def read(conn, mask):
 
 def check_expired_waiters():
     now = time.time()
-    for key, waiters in list(waiting.items()):
-        expired = [(c, d) for c, d in waiters if d and now >= d]
+    for waiters in list(waiting.values()):
+        expired = [(c, d) for c, d in list(waiters) if d and now >= d]
         for conn, deadline in expired:
             waiters.remove((conn, deadline))
+            conn.send(b"*-1\r\n")
+    for waiters in list(xread_waiting.values()):
+        expired = [(c, s, d) for c, s, d in list(waiters) if d and now >= d]
+        for conn, start, deadline in expired:
+            waiters.remove((conn, start, deadline))
             conn.send(b"*-1\r\n")
 
 
 def get_next_timeout():
     deadlines = [d for waiters in waiting.values() for _, d in waiters if d]
+    deadlines += [d for waiters in xread_waiting.values() for _, _, d in waiters if d]
     if not deadlines:
         return None
     return max(0, min(deadlines) - time.time())

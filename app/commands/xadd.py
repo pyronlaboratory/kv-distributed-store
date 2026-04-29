@@ -1,7 +1,7 @@
 import time
 
-from app.store import store
-from app.protocols.encoder import resp_encoder
+from app.store import store, xread_waiting
+from app.protocols.encoder import resp_encoder, resp_entry_encoder
 
 ERR_SMALL = b"-ERR The ID specified in XADD is equal or smaller than the target stream top item\r\n"
 ERR_ZERO = b"-ERR The ID specified in XADD must be greater than 0-0\r\n"
@@ -50,7 +50,14 @@ def execute(args):
     resolved_id = f"{ms}-{seq}".encode()
     if key not in store:
         store[key] = ([], None)
-    store[key][0].append(
-        (resolved_id, {args[i]: args[i + 1] for i in range(3, len(args), 2)})
-    )
+
+    entry = {args[i]: args[i + 1] for i in range(3, len(args), 2)}
+    store[key][0].append((resolved_id, entry))
+
+    if key in xread_waiting and xread_waiting[key]:
+        conn, start_id, _ = xread_waiting[key].popleft()
+        response = b"*1\r\n*2\r\n" + resp_encoder(key)
+        response += b"*1\r\n" + resp_entry_encoder(resolved_id, entry)
+        conn.send(response)
+
     return resp_encoder(resolved_id)
