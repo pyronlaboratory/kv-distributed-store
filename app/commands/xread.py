@@ -9,25 +9,6 @@ def parse_id(entry_id):
     return int(ms), int(seq)
 
 
-def build_response(key, entries, start):
-    stream_entries = b""
-    count = 0
-    for entry_id, fields in entries:
-        if parse_id(entry_id) > start:
-            stream_entries += resp_entry_encoder(entry_id, fields)
-            count += 1
-    if not count:
-        return None
-    return (
-        b"*1\r\n*2\r\n"
-        + resp_encoder(key)
-        + b"*"
-        + str(count).encode()
-        + b"\r\n"
-        + stream_entries
-    )
-
-
 def execute(args, conn=None):
     block_ms = None
     if args[1].upper() == b"BLOCK":
@@ -45,9 +26,15 @@ def execute(args, conn=None):
     for key, start_id in zip(keys, ids):
         entries, _ = store.get(key, ([], None))
         start = parse_id(start_id)
-        stream_result = build_response(key, entries, start)
-        if stream_result:
-            result += stream_result
+        stream_entries = b""
+        entry_count = 0
+        for entry_id, fields in entries:
+            if parse_id(entry_id) > start:
+                stream_entries += resp_entry_encoder(entry_id, fields)
+                entry_count += 1
+        if entry_count:
+            result += b"*2\r\n" + resp_encoder(key)
+            result += b"*" + str(entry_count).encode() + b"\r\n" + stream_entries
             count += 1
 
     if count:
