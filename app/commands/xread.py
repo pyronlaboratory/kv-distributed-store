@@ -24,6 +24,8 @@ def execute(args, conn=None):
     result = b""
     count = 0
     for key, start_id in zip(keys, ids):
+        if start_id == b"$":
+            continue
         entries, _ = store.get(key, ([], None))
         start = parse_id(start_id)
         stream_entries = b""
@@ -44,9 +46,12 @@ def execute(args, conn=None):
     if block_ms is not None and conn:
         deadline = time.time() + block_ms / 1000 if block_ms > 0 else None
         for key, start_id in zip(keys, ids):
-            xread_waiting.setdefault(key, deque()).append(
-                (conn, parse_id(start_id), deadline)
-            )
+            if start_id == b"$":
+                entries, _ = store.get(key, ([], None))
+                start = parse_id(entries[-1][0]) if entries else (0, 0)
+            else:
+                start = parse_id(start_id)
+            xread_waiting.setdefault(key, deque()).append((conn, start, deadline))
         return None
 
     return b"*0\r\n"
