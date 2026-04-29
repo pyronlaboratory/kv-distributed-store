@@ -1,3 +1,5 @@
+import time
+
 from app.store import store
 from app.protocols.encoder import resp_encoder
 
@@ -6,6 +8,15 @@ ERR_ZERO = b"-ERR The ID specified in XADD must be greater than 0-0\r\n"
 
 
 def resolve_id(entry_id, entries):
+    if entry_id == b"*":
+        ms = int(time.time() * 1000)
+        if entries:
+            last_ms, last_seq = parse_id(entries[-1][0])
+            seq = last_seq + 1 if last_ms == ms else 0
+        else:
+            seq = 0
+        return ms, seq
+
     ms, seq = entry_id.split(b"-")
     ms = int(ms)
 
