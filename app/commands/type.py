@@ -7,6 +7,8 @@ def execute(args):
     if entry is None:
         return b"+none\r\n"
     value, _ = entry
+    if isinstance(value, list) and value and isinstance(value[0], tuple):
+        return b"+stream\r\n"
     if isinstance(value, list):
         return b"+list\r\n"
     return b"+string\r\n"
