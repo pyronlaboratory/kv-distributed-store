@@ -9,7 +9,7 @@ def parse_id(entry_id):
 
 def execute(args):
     # args: [XREAD, STREAMS, key1, key2..., id1, id2...]
-    streams_idx = args.index(b"STREAMS") + 1
+    streams_idx = next(i for i, a in enumerate(args) if a.upper() == b"STREAMS") + 1
     half = (len(args) - streams_idx) // 2
     keys = args[streams_idx : streams_idx + half]
     ids = args[streams_idx + half :]
