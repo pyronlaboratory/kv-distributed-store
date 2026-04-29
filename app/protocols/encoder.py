@@ -17,3 +17,8 @@ def resp_array_encoder(values):
     encoded = b"*" + str(len(values)).encode() + b"\r\n"
     encoded += b"".join(resp_encoder(v) for v in values)
     return encoded
+
+
+def resp_entry_encoder(entry_id, fields):
+    flat_fields = [k for pair in fields.items() for k in pair]
+    return b"*2\r\n" + resp_encoder(entry_id) + resp_array_encoder(flat_fields)
