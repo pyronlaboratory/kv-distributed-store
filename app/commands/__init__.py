@@ -1,4 +1,4 @@
-from . import ping, echo, set, get, rpush, lrange, lpush, lpop, llen, blpop
+from . import ping, echo, set, get, rpush, lrange, lpush, lpop, llen, blpop, type
 
 COMMANDS = {
     b"PING": ping.execute,
@@ -11,4 +11,5 @@ COMMANDS = {
     b"LPOP": lpop.execute,
     b"LLEN": llen.execute,
     b"BLPOP": blpop.execute,
+    b"TYPE": type.execute,
 }
