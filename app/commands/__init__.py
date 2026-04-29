@@ -12,6 +12,7 @@ from . import (
     type,
     xadd,
     xrange,
+    xread,
 )
 
 COMMANDS = {
@@ -28,4 +29,5 @@ COMMANDS = {
     b"TYPE": type.execute,
     b"XADD": xadd.execute,
     b"XRANGE": xrange.execute,
+    b"XREAD": xread.execute,
 }
